@@ -1,0 +1,9 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(go run:*)",
+      "WebFetch(domain:medium.com)"
+    ],
+    "deny": []
+  }
+}
