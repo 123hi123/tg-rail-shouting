@@ -63,3 +63,13 @@ go run main.go
 1. 与你的Bot聊天，发送任意消息
 2. 访问: `https://api.telegram.org/bot<YOUR_BOT_TOKEN>/getUpdates`
 3. 从返回的JSON中获取chat_id
+
+
+## 部署
+```bash
+docker run -d \
+      --name tg-rail-bot \
+      --restart unless-stopped \
+      -v $(pwd)/.env:/root/.env \
+      ghcr.io/123hi123/tg-rail-shouting:main
+```
