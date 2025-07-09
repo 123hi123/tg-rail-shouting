@@ -62,9 +62,8 @@ func (s *Scheduler) Stop() {
 }
 
 func (s *Scheduler) shouldMonitor() bool {
-	now := time.Now()
-	hour := now.Hour()
-	return hour >= s.config.Monitor.StartHour && hour <= s.config.Monitor.EndHour
+	// 移除時間段限制，全天候監控
+	return true
 }
 
 func (s *Scheduler) runInitialCheck() {
@@ -116,25 +115,38 @@ func (s *Scheduler) checkTrainsForce(isInitial bool) {
 }
 
 func (s *Scheduler) processTrains(trains []tdx.TrainInfo, isInitial bool) {
-	now := time.Now()
-	currentTime := now.Format("15:04:05")
+	// 不再過濾時間，直接取最多5個列車
+	var processedTrains []tdx.TrainInfo
+	maxTrains := 5
 	
-	var upcomingTrains []tdx.TrainInfo
-	for _, train := range trains {
-		if train.ArrivalTime >= currentTime {
-			upcomingTrains = append(upcomingTrains, train)
+	for i, train := range trains {
+		if i >= maxTrains {
+			break
 		}
+		
+		// 為每個列車獲取完整路線信息
+		route, err := s.tdxClient.GetTrainRoute(train.TrainNo)
+		if err != nil {
+			logrus.WithError(err).WithField("train", train.TrainNo).Warn("Failed to get train route")
+			// 如果獲取路線失敗，仍然添加基本信息
+			processedTrains = append(processedTrains, train)
+			continue
+		}
+		
+		// 添加路線信息到列車數據
+		train.Stations = route
+		processedTrains = append(processedTrains, train)
 	}
 	
-	if len(upcomingTrains) == 0 {
-		logrus.Info("No upcoming trains found")
+	if len(processedTrains) == 0 {
+		logrus.Info("No trains found")
 		if isInitial {
 			s.sendNoTrainsMessage()
 		}
 		return
 	}
 	
-	logrus.WithField("count", len(upcomingTrains)).Info("Found upcoming trains")
+	logrus.WithField("count", len(processedTrains)).Info("Found trains to display")
 	
 	var stationName string
 	if isInitial {
@@ -143,14 +155,12 @@ func (s *Scheduler) processTrains(trains []tdx.TrainInfo, isInitial bool) {
 		stationName = "竹北"
 	}
 	
-	if err := s.tgBot.SendTrainInfo(upcomingTrains, stationName); err != nil {
+	if err := s.tgBot.SendTrainInfo(processedTrains, stationName); err != nil {
 		logrus.WithError(err).Error("Failed to send train info")
 		return
 	}
 	
-	if !isInitial {
-		s.sendDetailedInfo(upcomingTrains)
-	}
+	// 不再需要 sendDetailedInfo，因為主要訊息已經包含完整路線
 }
 
 func (s *Scheduler) sendDetailedInfo(trains []tdx.TrainInfo) {

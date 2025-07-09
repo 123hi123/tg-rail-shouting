@@ -57,16 +57,25 @@ func (c *Client) authenticate() error {
 		Post(c.authURL)
 
 	if err != nil {
-		return fmt.Errorf("authentication request failed: %w", err)
+		logrus.WithError(err).Warn("Authentication request failed, falling back to free API")
+		c.accessToken = ""
+		return nil
 	}
 
 	if resp.StatusCode() != 200 {
-		return fmt.Errorf("authentication failed with status: %d, body: %s", resp.StatusCode(), resp.String())
+		logrus.WithFields(logrus.Fields{
+			"status": resp.StatusCode(),
+			"body":   resp.String(),
+		}).Warn("Authentication failed, falling back to free API")
+		c.accessToken = ""
+		return nil
 	}
 
 	var tokenResp TokenResponse
 	if err := json.Unmarshal(resp.Body(), &tokenResp); err != nil {
-		return fmt.Errorf("failed to parse token response: %w", err)
+		logrus.WithError(err).Warn("Failed to parse token response, falling back to free API")
+		c.accessToken = ""
+		return nil
 	}
 
 	c.accessToken = tokenResp.AccessToken
@@ -158,7 +167,7 @@ func (c *Client) GetTrainTimetable(stationID string, direction int) ([]TrainInfo
 				arrivalTime = board.ScheduleDepartureTime
 			}
 
-			// 只显示当前时间之后的列车
+			// 只顯示當前時間之後的列車（還沒過站的）
 			if arrivalTime >= currentTime {
 				trainInfo := TrainInfo{
 					TrainNo:       board.TrainNo,

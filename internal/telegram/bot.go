@@ -49,38 +49,37 @@ func (b *Bot) SendMessage(text string) error {
 
 func (b *Bot) SendTrainInfo(trains []tdx.TrainInfo, stationName string) error {
 	if len(trains) == 0 {
-		message := fmt.Sprintf("🚄 <b>%s站 列车信息</b>\n\n暂无列车信息", stationName)
+		message := fmt.Sprintf("🚄 %s站 列车信息\n\n暂无列车信息", stationName)
 		return b.SendMessage(message)
 	}
 
 	var message strings.Builder
-	message.WriteString(fmt.Sprintf("🚄 <b>%s站 列车信息</b>\n", stationName))
-	message.WriteString(fmt.Sprintf("📅 更新时间: %s\n\n", getCurrentTime()))
+	message.WriteString(fmt.Sprintf("🚄 %s站 列车信息\n\n", stationName))
 
 	for i, train := range trains {
-		if i >= 10 {
+		if i >= 5 {
 			break
 		}
 
-		message.WriteString(fmt.Sprintf("🚂 <b>%s次 (%s)</b>\n", train.TrainNo, train.TrainType))
+		message.WriteString(fmt.Sprintf("🚂 %s次 (%s)\n", train.TrainNo, train.TrainType))
 		message.WriteString(fmt.Sprintf("⏰ 到达: %s", train.ArrivalTime))
 		if train.DepartureTime != "" && train.DepartureTime != train.ArrivalTime {
 			message.WriteString(fmt.Sprintf(" / 出发: %s", train.DepartureTime))
 		}
-		message.WriteString("\n")
+		message.WriteString("\n\n")
 
 		if len(train.Stations) > 0 {
-			message.WriteString("🛤️ 途经站点: ")
+			message.WriteString("完整路線: ")
 			stationNames := make([]string, 0, len(train.Stations))
 			for _, station := range train.Stations {
-				if len(stationNames) < 8 {
-					stationNames = append(stationNames, station.StationName)
+				stationName := station.StationName
+				// 如果是富岡站，加粗顯示
+				if strings.Contains(stationName, "富岡") {
+					stationName = fmt.Sprintf("<b>%s</b>", stationName)
 				}
+				stationNames = append(stationNames, stationName)
 			}
 			message.WriteString(strings.Join(stationNames, " → "))
-			if len(train.Stations) > 8 {
-				message.WriteString(" ...")
-			}
 			message.WriteString("\n")
 		}
 		
