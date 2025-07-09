@@ -2,6 +2,7 @@ package telegram
 
 import (
 	"fmt"
+	"os"
 	"strings"
 
 	"github.com/go-resty/resty/v2"
@@ -138,6 +139,27 @@ func (b *Bot) SendDetailedTrainInfo(trains []tdx.TrainInfo, stationName string, 
 	}
 
 	return b.SendMessage(message.String())
+}
+
+func (b *Bot) SendStartupMessage() error {
+	version := b.getVersion()
+	message := fmt.Sprintf("🚀 <b>台灣鐵路監控服務啟動成功</b>\n\n"+
+		"✅ Telegram Bot 連線正常\n"+
+		"✅ 服務配置載入完成\n"+
+		"⏰ 監控時間: 18:00-23:00\n"+
+		"🔄 檢查間隔: 每30分鐘\n\n"+
+		"📋 版本: v%s", version)
+	
+	return b.SendMessage(message)
+}
+
+func (b *Bot) getVersion() string {
+	content, err := os.ReadFile("version.txt")
+	if err != nil {
+		logrus.WithError(err).Warn("Failed to read version file")
+		return "unknown"
+	}
+	return strings.TrimSpace(string(content))
 }
 
 func getCurrentTime() string {

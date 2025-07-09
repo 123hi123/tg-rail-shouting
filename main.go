@@ -31,6 +31,11 @@ func main() {
 	
 	tgBot := telegram.NewBot(cfg.Telegram.BotToken, cfg.Telegram.ChatID)
 	
+	// Send startup message with version
+	if err := tgBot.SendStartupMessage(); err != nil {
+		logrus.WithError(err).Warn("Failed to send startup message")
+	}
+	
 	scheduler := monitor.NewScheduler(cfg, tdxClient, tgBot)
 	
 	if err := scheduler.SendTestMessage(); err != nil {
